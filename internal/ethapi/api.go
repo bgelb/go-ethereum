@@ -1559,6 +1559,12 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		tracer := logger.NewAccessListTracer(accessList, args.from(), to, precompiles)
 		config := vm.Config{Tracer: tracer, NoBaseFee: true}
 		vmenv, _ := b.GetEVM(ctx, msg, statedb, header, &config, nil)
+
+		// Increment the BlockNumber and Time values to simulate the transaction of
+		// interest in the next (N+1) block instead of the current (already mined) one
+		vmenv.Context.Time +=1
+		vmenv.Context.BlockNumber.Add(vmenv.Context.BlockNumber, big.NewInt(1))
+
 		res, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(msg.GasLimit))
 		if err != nil {
 			return nil, 0, nil, fmt.Errorf("failed to apply transaction: %v err: %v", args.toTransaction().Hash(), err)

@@ -170,6 +170,7 @@ type TraceConfig struct {
 	Tracer  *string
 	Timeout *string
 	Reexec  *uint64
+	NoLog   bool
 }
 
 // TraceCallConfig is the config for traceCall API. It holds one more
@@ -180,6 +181,7 @@ type TraceCallConfig struct {
 	Timeout        *string
 	Reexec         *uint64
 	StateOverrides *ethapi.StateOverride
+	NoLog          bool
 }
 
 // StdTraceConfig holds extra parameters to standard-json trace functions.
@@ -849,10 +851,10 @@ func (api *API) TraceCall(ctx context.Context, args ethapi.TransactionArgs, bloc
 	var traceConfig *TraceConfig
 	if config != nil {
 		traceConfig = &TraceConfig{
-			Config:  config.Config,
-			Tracer:  config.Tracer,
-			Timeout: config.Timeout,
-			Reexec:  config.Reexec,
+			Tracer:    config.Tracer,
+			Timeout:   config.Timeout,
+			Reexec:    config.Reexec,
+			NoLog:     config.NoLog,
 		}
 	}
 	return api.traceTx(ctx, msg, new(Context), vmctx, statedb, traceConfig)
@@ -867,6 +869,7 @@ func (api *API) traceTx(ctx context.Context, message core.Message, txctx *Contex
 		tracer    vm.EVMLogger
 		err       error
 		txContext = core.NewEVMTxContext(message)
+		debug     bool
 	)
 	switch {
 	case config == nil:
@@ -895,8 +898,15 @@ func (api *API) traceTx(ctx context.Context, message core.Message, txctx *Contex
 	default:
 		tracer = logger.NewStructLogger(config.Config)
 	}
+
+	if config != nil && config.NoLog == true {
+		debug = false
+	} else {
+		debug = true
+	}
+
 	// Run the transaction with tracing enabled.
-	vmenv := vm.NewEVM(vmctx, txContext, statedb, api.backend.ChainConfig(), vm.Config{Debug: true, Tracer: tracer, NoBaseFee: true})
+	vmenv := vm.NewEVM(vmctx, txContext, statedb, api.backend.ChainConfig(), vm.Config{Debug: debug, Tracer: tracer, NoBaseFee: true})
 
 	// Call Prepare to clear out the statedb access list
 	statedb.Prepare(txctx.TxHash, txctx.TxIndex)
@@ -913,6 +923,14 @@ func (api *API) traceTx(ctx context.Context, message core.Message, txctx *Contex
 		returnVal := fmt.Sprintf("%x", result.Return())
 		if len(result.Revert()) > 0 {
 			returnVal = fmt.Sprintf("%x", result.Revert())
+		}
+		if config != nil && config.NoLog == true {
+			return &ethapi.ExecutionResult{
+				Gas:         result.UsedGas,
+				Failed:      result.Failed(),
+				ReturnValue: returnVal,
+				StructLogs:  nil,
+			}, nil
 		}
 		return &ethapi.ExecutionResult{
 			Gas:         result.UsedGas,

@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"runtime"
 	"sync"
@@ -847,6 +848,11 @@ func (api *API) TraceCall(ctx context.Context, args ethapi.TransactionArgs, bloc
 		return nil, err
 	}
 	vmctx := core.NewEVMBlockContext(block.Header(), api.chainContext(ctx), nil)
+
+	// Increment the BlockNumber and Time values to simulate the transaction of
+	// interest in the next (N+1) block instead of the current (already mined) one
+	vmctx.Time.Add(vmctx.Time, big.NewInt(1))
+	vmctx.BlockNumber.Add(vmctx.BlockNumber, big.NewInt(1))
 
 	var traceConfig *TraceConfig
 	if config != nil {

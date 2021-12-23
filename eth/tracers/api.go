@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"runtime"
 	"sync"
@@ -845,6 +846,9 @@ func (api *API) TraceCall(ctx context.Context, args ethapi.TransactionArgs, bloc
 		return nil, err
 	}
 	vmctx := core.NewEVMBlockContext(block.Header(), api.chainContext(ctx), nil)
+
+	// Add a small delta to timestamp, to ensure that some nonzero time has elapsed since parent block
+	vmctx.Time.Add(vmctx.Time, big.NewInt(1))
 
 	var traceConfig *TraceConfig
 	if config != nil {

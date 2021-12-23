@@ -847,8 +847,10 @@ func (api *API) TraceCall(ctx context.Context, args ethapi.TransactionArgs, bloc
 	}
 	vmctx := core.NewEVMBlockContext(block.Header(), api.chainContext(ctx), nil)
 
-	// Add a small delta to timestamp, to ensure that some nonzero time has elapsed since parent block
+	// Increment the BlockNumber and Time values to simulate the transaction of
+	// interest in the next (N+1) block instead of the current (already mined) one
 	vmctx.Time.Add(vmctx.Time, big.NewInt(1))
+	vmctx.BlockNumber.Add(vmctx.BlockNumber, big.NewInt(1))
 
 	var traceConfig *TraceConfig
 	if config != nil {

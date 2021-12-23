@@ -1457,8 +1457,10 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		config := vm.Config{Tracer: tracer, Debug: true, NoBaseFee: true}
 		vmenv, _, err := b.GetEVM(ctx, msg, statedb, header, &config)
 
-		// Add a small delta to timestamp, to ensure that some nonzero time has elapsed since parent block
+		// Increment the BlockNumber and Time values to simulate the transaction of
+		// interest in the next (N+1) block instead of the current (already mined) one
 		vmenv.Context.Time.Add(vmenv.Context.Time, big.NewInt(1))
+		vmenv.Context.BlockNumber.Add(vmenv.Context.BlockNumber, big.NewInt(1))
 
 		if err != nil {
 			return nil, 0, nil, err
